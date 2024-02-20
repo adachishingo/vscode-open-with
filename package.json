@@ -2,7 +2,7 @@
 	"name": "open-with",
 	"displayName": "Open With",
 	"description": "Open file with external app.",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"publisher": "adachishingo",
 	"icon": "icon.png",
 	"repository": {
@@ -59,6 +59,11 @@
 						"type": "string"
 					},
 					"markdownDescription": "Configure the app's full path to open the target with.\n\n\n\nFor example, `Chrome: C:/Program Files/Google/Chrome/Application/chrome.exe` on Windows."
+				},
+				"openWith.defaultApp.enable": {
+					"type": "boolean",
+					"default": true,
+					"markdownDescription": "Enable/disable default app option."
 				}
 			}
 		}

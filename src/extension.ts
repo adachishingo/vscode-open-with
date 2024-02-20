@@ -2,17 +2,17 @@ import * as vscode from 'vscode';
 import open = require('open');
 
 export function activate(context: vscode.ExtensionContext) {
-	let configuration: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration('openWith.externalApp');
-	const disposable = new Disposable(configuration.apps);
+	let configuration: vscode.WorkspaceConfiguration = vscode.workspace.getConfiguration('openWith');
+	const disposable = new Disposable(configuration);
 	context.subscriptions.push(disposable);
 }
 
 class Disposable implements vscode.Disposable {
 
 	private _disposable: vscode.Disposable;
-	private _apps: any;
+	private _configuration: any;
 
-	constructor(apps: any) {
+	constructor(configuration: any) {
 
 		const subscriptions: vscode.Disposable[] = [];
 		const disposable = vscode.commands.registerCommand('workbench.action.files.openFileWithExternal', (uri: vscode.Uri | undefined) => {
@@ -21,7 +21,7 @@ class Disposable implements vscode.Disposable {
 		subscriptions.push(disposable);
 
 		this._disposable = vscode.Disposable.from(...subscriptions);
-		this._apps = apps;
+		this._configuration = configuration;
 	}
 
 	dispose(): void {
@@ -56,45 +56,55 @@ class Disposable implements vscode.Disposable {
 
 		let items: vscode.QuickPickItem[] = [];
 
-		items.push({ label: 'Default Editor', description: '' });
-
-		for (const [key, value] of Object.entries(this._apps)) {
+		for (const [key, value] of Object.entries(this._configuration.externalApp.apps)) {
 			items.push({
 				label: key,
 				description: value as string,
 			});
 		}
 
-		const result = await vscode.window.showQuickPick(
-			items,
-			{ placeHolder: 'editor name', }
-		);
+		if (this._configuration.defaultApp.enable) {
+			items.push({ label: 'Default Editor', description: '' });
+		}
 
-		let app: string = result?.description!;
+		if (items.length == 1) {
+			this.openFileWithApp(uri, items[0].description!);
+		} else {
+			const result = await vscode.window.showQuickPick(
+				items,
+				{ placeHolder: 'editor name', }
+			);
 
-		if (result) {
-			try {
-				let option = {};
-				if (app) {
-					option = { app: { name: app } };
-				}
-				const p = open(decodeURIComponent(uri), option);
-				p.then((p) => {
-					p.on("exit", (n) => {
-						if (n != 0) {
-							vscode.window.showInformationMessage(
-								"Open " + decodeURIComponent(uri) + " with " + app + " failed."
-							);
-						}
-					});
+			let app: string = result?.description!;
+
+			if (result) {
+				this.openFileWithApp(uri, app);
+			}
+		}
+	}
+
+	private openFileWithApp(uri: string, app: string) {
+		try {
+			let option = {};
+			if (app) {
+				option = { app: { name: app } };
+			}
+			const p = open(decodeURIComponent(uri), option);
+			p.then((p) => {
+				p.on("exit", (n) => {
+					if (n != 0) {
+						vscode.window.showInformationMessage(
+							"Open " + decodeURIComponent(uri) + " with " + app + " failed."
+						);
+					}
 				});
-			} catch (error) {
-				vscode.window.showInformationMessage(
-					"Open " + decodeURIComponent(uri) + " with " + app + " failed."
-				);
-				if (error instanceof Error) {
-					console.error(error.stack);
-				}
+			});
+		} catch (error) {
+			vscode.window.showInformationMessage(
+				"Open " + decodeURIComponent(uri) + " with " + app + " failed."
+			);
+			if (error instanceof Error) {
+				console.error(error.stack);
 			}
 		}
 	}
